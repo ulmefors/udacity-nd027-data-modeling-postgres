@@ -7,21 +7,31 @@ from sql_queries import *
 
 def process_song_file(cur, filepath):
     """
-        Load song meta data
+    - Loads song meta data
+    - Inserts data into song and artist dimension tables
     """
+
     # open song file
+    # force year datatype can avoid np.int64 error at query string interpolation
     df = pd.read_json(filepath, lines=True, dtype={'year': pd.Categorical})
 
     # insert song record
     song_data = list(df.loc[0, ['song_id', 'title', 'artist_id', 'year', 'duration']].values)
     cur.execute(song_table_insert, song_data)
-    
+
     # insert artist record
     artist_data = list(df.loc[0, ['artist_id', 'artist_name', 'artist_location', 'artist_latitude', 'artist_longitude']].values)
     cur.execute(artist_table_insert, artist_data)
 
 
 def process_log_file(cur, filepath):
+    """
+    - Loads log file and filter relevant data
+    - Extracts time components
+    - Finds song and artist ids from song and artist tables
+    - Inserts data into user and time dimension tables
+    - Inserts data into songplay fact table
+    """
     # open log file
     df = pd.read_json(filepath, lines=True)
 
@@ -30,7 +40,7 @@ def process_log_file(cur, filepath):
 
     # convert timestamp column to datetime
     t = pd.to_datetime(df['ts'] * 1_000_000)
-    
+
     # insert time data records
     time_data = [df['ts'].values, t.dt.hour, t.dt.day, t.dt.week, t.dt.month, t.dt.year, t.dt.dayofweek]
     column_labels = ('start_time', 'hour', 'day', 'week', 'month', 'year', 'weekday')
@@ -48,11 +58,11 @@ def process_log_file(cur, filepath):
 
     # insert songplay records
     for index, row in df.iterrows():
-        
+
         # get songid and artistid from song and artist tables
         cur.execute(song_select, (row.song, row.artist, row.length))
         results = cur.fetchone()
-        
+
         if results:
             songid, artistid = results
         else:
@@ -64,6 +74,9 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
+    """
+    - Recursively find all data files and process in accordance with data type
+    """
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -83,6 +96,11 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    """
+    - Opens database connection to sparkifydb
+    - Processes logs and song metadata
+    - Closes database connection
+    """
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 

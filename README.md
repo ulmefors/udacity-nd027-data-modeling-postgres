@@ -4,7 +4,7 @@ Project submission for Udacity Data Engineering Nanodegree - Data Modeling with 
 
 ## Summary
 
-This project combines song listen log files with song metadata to facilitate analytics on denormalized table.
+This project combines song listen log files with song metadata to facilitate analytics. The data pipeline built in Python and SQL reads data from local directories, performs modeling and inserts into tables defined in a PostgreSQL star schema. Analytics queries on the ` songplays` fact table are straightforward, and additional fields can be easily accessed in the four dimension tables `users`, `songs`, `artists`, and `time`. A star schema is suitable for this application since denormalization is easy, queries can be kept simple, and aggregations are fast.
 
 ## Install
 
@@ -74,15 +74,17 @@ Run ETL pipeline
 $ python etl.py
 ```
 
-Example analysis script (count streams per subscription type)
+Example analysis script (count streams per subscription type, song listens per user)
 
 ```bash
 $ ipython
 > %load_ext sql
 > %sql postgresql://student:student@127.0.0.1/sparkifydb
 > %sql SELECT level, count(level) FROM songplays GROUP BY level
-
 [('free', 1229), ('paid', 5591)]
+
+> %sql SELECT user_id, COUNT(user_id) FROM songplays GROUP BY user_id ORDER BY COUNT(user_id) DESC LIMIT 5
+[('49', 689), ('80', 665), ('97', 557), ('15', 463), ('44', 397)]
 ```
 
 ## Further work
