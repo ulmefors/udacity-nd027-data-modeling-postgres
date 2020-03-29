@@ -9,7 +9,7 @@ time_table_drop = "DROP TABLE IF EXISTS time"
 # CREATE TABLES
 
 songplay_table_create = ("""CREATE TABLE IF NOT EXISTS songplays \
-    (songplay_id bigserial PRIMARY KEY, start_time bigint, user_id varchar, level varchar, song_id varchar, artist_id varchar, session_id int, location text, user_agent text)
+    (songplay_id bigserial PRIMARY KEY, start_time timestamp NOT NULL, user_id varchar NOT NULL, level varchar, song_id varchar, artist_id varchar, session_id int, location text, user_agent text)
 """)
 
 user_table_create = ("""CREATE TABLE IF NOT EXISTS users \
@@ -25,7 +25,7 @@ artist_table_create = ("""CREATE TABLE IF NOT EXISTS artists \
 """)
 
 time_table_create = ("""CREATE TABLE IF NOT EXISTS time \
-    (start_time bigint PRIMARY KEY, hour smallint, day smallint, week smallint, month smallint, year smallint, weekday smallint)
+    (start_time timestamp PRIMARY KEY, hour smallint, day smallint, week smallint, month smallint, year smallint, weekday smallint)
 """)
 
 # INSERT RECORDS
@@ -35,16 +35,22 @@ songplay_table_insert = ("""INSERT INTO songplays \
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
 """)
 
+# Update user subscription status and personal information (as provided by user)
 user_table_insert = ("""INSERT INTO users (user_id, first_name, last_name, gender, level) \
-    VALUES (%s, %s, %s, %s, %s) ON CONFLICT (user_id) DO NOTHING
+    VALUES (%s, %s, %s, %s, %s) ON CONFLICT (user_id) DO UPDATE \
+        SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, \
+        gender = EXCLUDED.gender, level = EXCLUDED.level
 """)
 
 song_table_insert = ("""INSERT INTO songs (song_id, title, artist_id, year, duration) \
     VALUES (%s, %s, %s, %s, %s) ON CONFLICT (song_id) DO NOTHING
 """)
 
+# Update artist information when name or location changes
 artist_table_insert = ("""INSERT INTO artists (artist_id, name, location, latitude, longitude) \
-    VALUES (%s, %s, %s, %s, %s) ON CONFLICT (artist_id) DO NOTHING
+    VALUES (%s, %s, %s, %s, %s) ON CONFLICT (artist_id) DO UPDATE \
+        SET name = EXCLUDED.name, location = EXCLUDED.location, \
+        latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude
 """)
 
 time_table_insert = ("""INSERT INTO time (start_time, hour, day, week, month, year, weekday) \
@@ -53,6 +59,7 @@ time_table_insert = ("""INSERT INTO time (start_time, hour, day, week, month, ye
 
 # FIND SONGS
 
+# Find songs with matching artist/title and similar duration
 song_select = ("""SELECT song_id, artists.artist_id FROM artists \
     JOIN songs ON artists.artist_id=songs.artist_id \
     WHERE songs.title=%s \
